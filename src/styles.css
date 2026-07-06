@@ -1,0 +1,171 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Poppins", ui-monospace, monospace;
+
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --shadow-xs: 0 1px 2px oklch(0.15 0.02 260 / 0.04);
+  --shadow-sm: 0 1px 3px oklch(0.15 0.02 260 / 0.06), 0 1px 2px oklch(0.15 0.02 260 / 0.03);
+  --shadow-md: 0 4px 12px oklch(0.15 0.02 260 / 0.06), 0 2px 4px oklch(0.15 0.02 260 / 0.04);
+  --shadow-lg: 0 12px 28px oklch(0.15 0.02 260 / 0.08);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Notion/Height-inspired warm-neutral light */
+  --background: oklch(0.995 0.002 90);
+  --foreground: oklch(0.22 0.015 260);
+  --surface: oklch(0.985 0.003 90);
+  --surface-2: oklch(0.965 0.004 90);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.015 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.015 260);
+
+  /* Deep ink primary — Height-like */
+  --primary: oklch(0.24 0.02 260);
+  --primary-foreground: oklch(0.985 0.003 90);
+
+  --secondary: oklch(0.955 0.005 90);
+  --secondary-foreground: oklch(0.28 0.02 260);
+
+  --muted: oklch(0.955 0.005 90);
+  --muted-foreground: oklch(0.52 0.015 260);
+
+  --accent: oklch(0.63 0.15 258);
+  --accent-foreground: oklch(0.99 0 0);
+
+  --destructive: oklch(0.6 0.19 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.65 0.14 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.22 0.03 75);
+  --info: oklch(0.68 0.11 235);
+  --info-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.92 0.005 90);
+  --border-strong: oklch(0.86 0.007 90);
+  --input: oklch(0.92 0.005 90);
+  --ring: oklch(0.63 0.15 258);
+
+  --sidebar: oklch(0.975 0.004 90);
+  --sidebar-foreground: oklch(0.32 0.015 260);
+  --sidebar-hover: oklch(0.945 0.006 90);
+  --sidebar-active: oklch(0.92 0.008 260);
+  --sidebar-border: oklch(0.915 0.005 90);
+
+  --chart-1: oklch(0.63 0.15 258);
+  --chart-2: oklch(0.65 0.14 155);
+  --chart-3: oklch(0.78 0.14 75);
+  --chart-4: oklch(0.62 0.18 15);
+  --chart-5: oklch(0.6 0.14 300);
+}
+
+.dark {
+  --background: oklch(0.16 0.01 260);
+  --foreground: oklch(0.96 0.005 90);
+  --surface: oklch(0.19 0.01 260);
+  --surface-2: oklch(0.23 0.012 260);
+  --card: oklch(0.2 0.01 260);
+  --card-foreground: oklch(0.96 0.005 90);
+  --popover: oklch(0.2 0.01 260);
+  --popover-foreground: oklch(0.96 0.005 90);
+  --primary: oklch(0.96 0.005 90);
+  --primary-foreground: oklch(0.2 0.02 260);
+  --secondary: oklch(0.25 0.01 260);
+  --secondary-foreground: oklch(0.96 0.005 90);
+  --muted: oklch(0.25 0.01 260);
+  --muted-foreground: oklch(0.7 0.015 260);
+  --accent: oklch(0.68 0.14 258);
+  --accent-foreground: oklch(0.99 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --border-strong: oklch(1 0 0 / 18%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.68 0.14 258);
+  --sidebar: oklch(0.18 0.01 260);
+  --sidebar-foreground: oklch(0.9 0.005 90);
+  --sidebar-hover: oklch(0.22 0.012 260);
+  --sidebar-active: oklch(0.28 0.02 260);
+  --sidebar-border: oklch(1 0 0 / 8%);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  /* Scale entire UI to 80% — all rem-based sizing (Tailwind spacing, fonts,
+     radii) shrinks proportionally on large displays. */
+  html { font-size: 12.8px; }
+  html, body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  body { background-color: var(--color-background); color: var(--color-foreground); }
+  h1, h2, h3 { letter-spacing: -0.02em; }
+
+  /* Markdown prose */
+  .prose-notion h1 { @apply text-2xl font-semibold mt-6 mb-3; }
+  .prose-notion h2 { @apply text-xl font-semibold mt-6 mb-2; }
+  .prose-notion h3 { @apply text-base font-semibold mt-4 mb-2; }
+  .prose-notion p { @apply text-[15px] leading-7 my-2 text-foreground/85; }
+  .prose-notion ul { @apply list-disc pl-6 my-2 space-y-1 text-[15px] text-foreground/85; }
+  .prose-notion ol { @apply list-decimal pl-6 my-2 space-y-1 text-[15px] text-foreground/85; }
+  .prose-notion code { @apply px-1.5 py-0.5 rounded bg-muted text-[13px] font-mono; }
+  .prose-notion pre { @apply p-4 rounded-lg bg-surface-2 text-[13px] font-mono overflow-x-auto my-3 border; }
+  .prose-notion pre code { @apply bg-transparent p-0; }
+  .prose-notion blockquote { @apply border-l-2 border-border-strong pl-4 italic text-muted-foreground my-3; }
+  .prose-notion table { @apply w-full text-sm my-3 border-collapse; }
+  .prose-notion th, .prose-notion td { @apply border px-3 py-1.5 text-left; }
+  .prose-notion hr { @apply my-6 border-border; }
+  .prose-notion strong { @apply font-semibold text-foreground; }
+  .prose-notion a { @apply text-accent underline underline-offset-2; }
+}
