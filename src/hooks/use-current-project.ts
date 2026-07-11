@@ -17,7 +17,7 @@ export function useCurrentProject() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(KEY);
-    if (stored && projects.some((p) => p.id === stored)) {
+    if (stored && projects.some((p: any) => p.id === stored)) {
       setIdState(stored);
     } else if (projects[0]) {
       setIdState(projects[0].id);
@@ -32,6 +32,6 @@ export function useCurrentProject() {
     if (typeof window !== "undefined") window.localStorage.setItem(KEY, next);
   }, []);
 
-  const current = projects.find((p) => p.id === id) ?? null;
+  const current = projects.find((p: any) => p.id === id) ?? null;
   return { projects, current, projectId: id, setProjectId: setId, isLoading };
 }

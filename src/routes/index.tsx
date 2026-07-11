@@ -144,14 +144,14 @@ function Landing() {
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-24">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="mx-auto max-w-5xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-success" /> Powered by Groq — Llama 3.3 70B
           </span>
           <h1 className="mt-6 font-display text-5xl leading-[1.05] text-foreground sm:text-6xl">
             The AI architect, reviewer and QA<br />for your entire SDLC.
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[15px] leading-7 text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-3xl text-[15px] leading-7 text-muted-foreground">
             Aristotle doesn't write your code. It reviews your architecture, generates your specs,
             audits your repos, scores your quality, and answers questions across every artifact —
             so your team ships better software, faster.
@@ -161,40 +161,6 @@ function Landing() {
               <Button size="lg" className="gap-2">Explore the demo project <ArrowRight className="h-4 w-4" /></Button>
             </Link>
             <a href="#features"><Button size="lg" variant="outline">See what it does</Button></a>
-          </div>
-        </div>
-
-        {/* Project Health Card */}
-        <div className="mx-auto mt-16 max-w-3xl rounded-xl border bg-card p-6 md:p-8 shadow-sm">
-          <div className="flex items-center justify-between border-b pb-4">
-            <div className="text-left">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Project health</span>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="font-display text-3xl font-bold text-foreground">87</span>
-                <span className="text-sm font-normal text-muted-foreground">/ 100</span>
-              </div>
-            </div>
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
-              <Activity className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-9">
-            {[
-              { label: "Reqs", score: 92 },
-              { label: "Arch", score: 88 },
-              { label: "Docs", score: 79 },
-              { label: "Sec", score: 71 },
-              { label: "UI", score: 84 },
-              { label: "DB", score: 90 },
-              { label: "API", score: 86 },
-              { label: "Test", score: 74 },
-              { label: "Maint", score: 83 },
-            ].map((m) => (
-              <div key={m.label} className="rounded-lg border bg-surface/50 p-3 text-center transition-colors hover:bg-surface">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.label}</div>
-                <div className="mt-1.5 text-lg font-bold text-foreground">{m.score}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -208,44 +174,62 @@ function Landing() {
               Every stage of the software lifecycle, reviewed by an AI expert trained to think like your best senior engineer.
             </p>
           </div>
-          <div className="mt-10 flex flex-col gap-6">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="group grid gap-6 md:grid-cols-3 rounded-xl border bg-card p-8 md:p-10 transition-shadow hover:shadow-md"
-              >
-                {/* Overview Info (Left 2/3) */}
-                <div className="md:col-span-2 flex items-start gap-5">
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-secondary text-secondary-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <f.icon className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-foreground">{f.title}</h3>
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        {f.tagline}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{f.desc}</p>
-                  </div>
-                </div>
 
-                {/* Key Capabilities (Right 1/3) */}
-                <div className="border-t md:border-t-0 md:border-l pt-6 md:pt-0 md:pl-8 flex flex-col justify-start">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Key Capabilities
-                  </span>
-                  <ul className="mt-3 space-y-2.5">
-                    {f.capabilities.map((cap) => (
-                      <li key={cap} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                        <span className="leading-tight">{cap}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+          {/* macOS window browser container */}
+          <div className="mx-auto mt-12 max-w-5xl overflow-hidden rounded-xl border bg-card shadow-2xl">
+            {/* Window Header / Titlebar */}
+            <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3 select-none">
+              <div className="flex gap-1.5">
+                <span className="h-3 w-3 rounded-full opacity-80 hover:opacity-100 transition-opacity" style={{ backgroundColor: "#ff5f56" }} />
+                <span className="h-3 w-3 rounded-full opacity-80 hover:opacity-100 transition-opacity" style={{ backgroundColor: "#ffbd2e" }} />
+                <span className="h-3 w-3 rounded-full opacity-80 hover:opacity-100 transition-opacity" style={{ backgroundColor: "#27c93f" }} />
               </div>
-            ))}
+              <div className="text-[10px] font-medium text-muted-foreground font-mono tracking-wide uppercase">
+                aristotle-workspace ~/ modules
+              </div>
+              <div className="w-12" /> {/* spacer to balance the dots */}
+            </div>
+
+            {/* Window Content */}
+            <div className="p-6 md:p-10 bg-background flex flex-col gap-6">
+              {features.map((f) => (
+                <div
+                  key={f.title}
+                  className="group grid gap-6 md:grid-cols-3 rounded-xl border bg-card p-6 md:p-8 transition-shadow hover:shadow-md"
+                >
+                  {/* Overview Info (Left 2/3) */}
+                  <div className="md:col-span-2 flex items-start gap-5">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-secondary text-secondary-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <f.icon className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-lg font-semibold text-foreground">{f.title}</h3>
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                          {f.tagline}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </div>
+
+                  {/* Key Capabilities (Right 1/3) */}
+                  <div className="border-t md:border-t-0 md:border-l pt-6 md:pt-0 md:pl-8 flex flex-col justify-start">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Key Capabilities
+                    </span>
+                    <ul className="mt-3 space-y-2.5">
+                      {f.capabilities.map((cap) => (
+                        <li key={cap} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          <span className="leading-tight">{cap}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

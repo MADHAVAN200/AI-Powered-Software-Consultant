@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireLocalAuth } from "./auth-middleware";
 
 const CreateProjectInput = z.object({
   name: z.string().min(1).max(120),
@@ -10,11 +10,11 @@ const CreateProjectInput = z.object({
 });
 
 export const createProject = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => CreateProjectInput.parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => CreateProjectInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: project, error } = await supabase
+    const { db, userId } = context;
+    const { data: project, error } = await db
       .from("projects")
       .insert({
         owner_id: userId,
@@ -27,14 +27,14 @@ export const createProject = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     // Seed default quality score row
-    await supabase.from("quality_scores").insert({ project_id: project.id }).select();
+    await db.from("quality_scores").insert({ project_id: project.id }).select();
     return project;
   });
 
 export const listProjects = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireLocalAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("projects")
       .select("*")
       .order("updated_at", { ascending: false });
@@ -43,13 +43,13 @@ export const listProjects = createServerFn({ method: "GET" })
   });
 
 export const getProject = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const [{ data: project, error }, { data: scores }, { data: artifacts }] = await Promise.all([
-      context.supabase.from("projects").select("*").eq("id", data.id).single(),
-      context.supabase.from("quality_scores").select("*").eq("project_id", data.id).maybeSingle(),
-      context.supabase
+      context.db.from("projects").select("*").eq("id", data.id).single(),
+      context.db.from("quality_scores").select("*").eq("project_id", data.id).maybeSingle(),
+      context.db
         .from("artifacts")
         .select("id, kind, title, score, created_at, updated_at")
         .eq("project_id", data.id)
@@ -61,12 +61,12 @@ export const getProject = createServerFn({ method: "GET" })
   });
 
 export const listArtifacts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) =>
     z.object({ project_id: z.string().uuid(), kind: z.string().optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    let q = context.supabase
+    let q = context.db
       .from("artifacts")
       .select("*")
       .eq("project_id", data.project_id)
@@ -78,10 +78,10 @@ export const listArtifacts = createServerFn({ method: "GET" })
   });
 
 export const getArtifact = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.db
       .from("artifacts")
       .select("*")
       .eq("id", data.id)
@@ -91,23 +91,23 @@ export const getArtifact = createServerFn({ method: "GET" })
   });
 
 export const deleteArtifact = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("artifacts").delete().eq("id", data.id);
+    const { error } = await context.db.from("artifacts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const getWorkspaceOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireLocalAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { db } = context;
     const [{ data: projects }, { data: scores }, { data: artifacts }, { count: totalArtifactCount }] = await Promise.all([
-      supabase.from("projects").select("id, name, description, tech_stack, status, updated_at").order("updated_at", { ascending: false }),
-      supabase.from("quality_scores").select("*"),
-      supabase.from("artifacts").select("id, project_id, kind, title, score, updated_at, created_at").order("updated_at", { ascending: false }).limit(200),
-      supabase.from("artifacts").select("id", { count: "exact", head: true }),
+      db.from("projects").select("id, name, description, tech_stack, status, updated_at").order("updated_at", { ascending: false }),
+      db.from("quality_scores").select("*"),
+      db.from("artifacts").select("id, project_id, kind, title, score, updated_at, created_at").order("updated_at", { ascending: false }).limit(200),
+      db.from("artifacts").select("id", { count: "exact", head: true }),
     ]);
     const ps = projects ?? [];
     const ss = scores ?? [];
@@ -124,10 +124,10 @@ export const getWorkspaceOverview = createServerFn({ method: "GET" })
     }
     if (ss.length) for (const d of dims) dimAverages[d] = Math.round(dimAverages[d] / ss.length);
 
-    const projectHealth = ps.map((p) => ({ ...p, health: scoreByProject.get(p.id) ?? null }));
-    const healthNums = projectHealth.map((p) => p.health).filter((n): n is number => typeof n === "number" && n > 0);
-    const avgHealth = healthNums.length ? Math.round(healthNums.reduce((a, b) => a + b, 0) / healthNums.length) : null;
-    const atRisk = projectHealth.filter((p) => (p.health ?? 100) < 60).length;
+    const projectHealth = ps.map((p: any) => ({ ...p, health: scoreByProject.get(p.id) ?? null }));
+    const healthNums = projectHealth.map((p: any) => p.health).filter((n: any): n is number => typeof n === "number" && n > 0);
+    const avgHealth = healthNums.length ? Math.round(healthNums.reduce((a: any, b: any) => a + b, 0) / healthNums.length) : null;
+    const atRisk = projectHealth.filter((p: any) => (p.health ?? 100) < 60).length;
 
     // Artifacts by kind
     const kindMap = new Map<string, number>();
@@ -136,10 +136,10 @@ export const getWorkspaceOverview = createServerFn({ method: "GET" })
 
     // Health buckets
     const healthBuckets = [
-      { label: "Excellent", range: "80-100", count: projectHealth.filter((p) => (p.health ?? 0) >= 80).length },
-      { label: "Good", range: "60-79", count: projectHealth.filter((p) => (p.health ?? 0) >= 60 && (p.health ?? 0) < 80).length },
-      { label: "At Risk", range: "40-59", count: projectHealth.filter((p) => (p.health ?? 0) >= 40 && (p.health ?? 0) < 60).length },
-      { label: "Critical", range: "0-39", count: projectHealth.filter((p) => (p.health ?? 100) < 40).length },
+      { label: "Excellent", range: "80-100", count: projectHealth.filter((p: any) => (p.health ?? 0) >= 80).length },
+      { label: "Good", range: "60-79", count: projectHealth.filter((p: any) => (p.health ?? 0) >= 60 && (p.health ?? 0) < 80).length },
+      { label: "At Risk", range: "40-59", count: projectHealth.filter((p: any) => (p.health ?? 0) >= 40 && (p.health ?? 0) < 60).length },
+      { label: "Critical", range: "0-39", count: projectHealth.filter((p: any) => (p.health ?? 100) < 40).length },
     ];
 
     // Activity last 14 days
@@ -149,7 +149,7 @@ export const getWorkspaceOverview = createServerFn({ method: "GET" })
     for (let i = 13; i >= 0; i--) {
       const start = now - i * day;
       const label = new Date(start).toISOString().slice(5, 10);
-      const count = as.filter((a) => {
+      const count = as.filter((a: any) => {
         const t = new Date(a.created_at ?? a.updated_at).getTime();
         return t >= start - day / 2 && t < start + day / 2;
       }).length;

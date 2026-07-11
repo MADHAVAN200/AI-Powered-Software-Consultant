@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireLocalAuth } from "./auth-middleware";
 import { groqChat } from "./groq.server";
 
 const uuid = z.string().uuid();
@@ -13,10 +13,10 @@ const STATUS = z.enum(["draft", "in_review", "approved", "needs_update", "archiv
 
 // ================= Workspace =================
 export const getDocumentationWorkspace = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: uuid }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ project_id: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const pid = data.project_id;
     const [documents, versions, comments, reviews, approvals, templates] = await Promise.all([
       s.from("documents").select("*").eq("project_id", pid).order("category").order("title"),
@@ -51,10 +51,10 @@ const DocInput = z.object({
 });
 
 export const upsertDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => DocInput.parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => DocInput.parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { id, change_summary, ...payload } = data;
 
     if (id) {
@@ -88,31 +88,31 @@ export const upsertDocument = createServerFn({ method: "POST" })
   });
 
 export const deleteDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: uuid }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ id: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("documents").delete().eq("id", data.id);
+    const { error } = await context.db.from("documents").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= Comments =================
 export const addDocComment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({
     document_id: uuid, project_id: uuid,
     author_name: z.string().min(1).max(200), body: z.string().min(1).max(4000),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: c, error } = await context.supabase.from("document_comments").insert(data).select("*").single();
+    const { data: c, error } = await context.db.from("document_comments").insert(data).select("*").single();
     if (error) throw new Error(error.message);
     return c;
   });
 
 // ================= Approvals =================
 export const upsertDocApproval = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({
     id: uuid.optional(), document_id: uuid, project_id: uuid,
     stage: z.string().min(1).max(80), approver_name: z.string().min(1).max(200),
     status: z.enum(["pending", "approved", "rejected", "changes_requested"]),
@@ -123,23 +123,23 @@ export const upsertDocApproval = createServerFn({ method: "POST" })
     const payload = { ...data, decided_at: decided };
     if (data.id) {
       const { id, ...rest } = payload;
-      const { error } = await context.supabase.from("document_approvals").update(rest).eq("id", id!);
+      const { error } = await context.db.from("document_approvals").update(rest).eq("id", id!);
       if (error) throw new Error(error.message);
       return { ok: true };
     }
     const { id: _omit, ...rest } = payload;
     void _omit;
-    const { error } = await context.supabase.from("document_approvals").insert(rest);
+    const { error } = await context.db.from("document_approvals").insert(rest);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= Restore version =================
 export const restoreDocVersion = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ version_id: uuid }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ version_id: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: v, error } = await s.from("document_versions").select("*").eq("id", data.version_id).single();
     if (error) throw new Error(error.message);
     const { data: doc } = await s.from("documents").select("current_version").eq("id", v.document_id).single();
@@ -162,15 +162,15 @@ export const restoreDocVersion = createServerFn({ method: "POST" })
 
 // ================= AI Generate =================
 export const aiGenerateDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({
     project_id: uuid, category: CATEGORY,
     doc_type: z.string().min(1).max(80),
     title: z.string().min(1).max(300),
     context_brief: z.string().max(8000).optional().nullable(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
 
     // pull light project context
     const [{ data: project }, { data: overview }, { data: reqs }] = await Promise.all([
@@ -186,7 +186,7 @@ export const aiGenerateDocument = createServerFn({ method: "POST" })
       project?.description ? `Description: ${project.description}` : "",
       project?.tech_stack?.length ? `Stack: ${project.tech_stack.join(", ")}` : "",
       overview ? `Business context:\n- Domain: ${overview.business_domain ?? "-"}\n- Problem: ${overview.problem_statement ?? "-"}\n- Opportunity: ${overview.business_opportunity ?? "-"}\n- Outcome: ${overview.expected_outcome ?? "-"}` : "",
-      reqs?.length ? `Key requirements:\n${reqs.slice(0, 20).map((r) => `- ${r.code} [${r.priority}] ${r.title}`).join("\n")}` : "",
+      reqs?.length ? `Key requirements:\n${reqs.slice(0, 20).map((r: any) => `- ${r.code} [${r.priority}] ${r.title}`).join("\n")}` : "",
       data.context_brief ? `Additional brief:\n${data.context_brief}` : "",
       `Task: Generate the full "${data.title}" (${data.doc_type}) in the ${data.category} category. Include all standard sections for that document type.`,
     ].filter(Boolean).join("\n\n");
@@ -214,10 +214,10 @@ export const aiGenerateDocument = createServerFn({ method: "POST" })
 
 // ================= AI Review =================
 export const aiReviewDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ document_id: uuid }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ document_id: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: doc, error } = await s.from("documents").select("*").eq("id", data.document_id).single();
     if (error) throw new Error(error.message);
 
@@ -263,12 +263,12 @@ export const aiReviewDocument = createServerFn({ method: "POST" })
 
 // ================= Create from Template =================
 export const createFromTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({
     project_id: uuid, template_id: uuid, title: z.string().min(1).max(300).optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: t, error } = await s.from("document_templates").select("*").eq("id", data.template_id).single();
     if (error) throw new Error(error.message);
     const { data: created, error: cerr } = await s.from("documents").insert({

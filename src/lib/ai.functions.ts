@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireLocalAuth } from "./auth-middleware";
 import { groqChat, groqJson } from "./groq.server";
 
 const ARTIFACT_KINDS = [
@@ -139,8 +139,8 @@ End with \`\`\`json {"score": 0-100} \`\`\`.`,
 
 // -------------- Document generator --------------
 export const generateDocument = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) =>
     z.object({
       project_id: z.string().uuid(),
       kind: z.enum(ARTIFACT_KINDS),
@@ -158,7 +158,7 @@ export const generateDocument = createServerFn({ method: "POST" })
 
     const score = extractScore(content);
 
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.db
       .from("artifacts")
       .insert({
         project_id: data.project_id,
@@ -173,7 +173,7 @@ export const generateDocument = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    await context.supabase.from("activity_log").insert({
+    await context.db.from("activity_log").insert({
       project_id: data.project_id,
       actor_id: context.userId,
       action: "generated",
@@ -186,8 +186,8 @@ export const generateDocument = createServerFn({ method: "POST" })
 
 // -------------- Detect missing requirements --------------
 export const analyzeRequirements = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) =>
     z.object({ project_id: z.string().uuid(), requirements_md: z.string().min(20) }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -210,7 +210,7 @@ export const analyzeRequirements = createServerFn({ method: "POST" })
 
     const md = renderAnalysisMd(result);
 
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.db
       .from("artifacts")
       .insert({
         project_id: data.project_id,
@@ -229,8 +229,8 @@ export const analyzeRequirements = createServerFn({ method: "POST" })
 
 // -------------- Project assistant chat --------------
 export const projectChat = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) =>
     z.object({
       project_id: z.string().uuid(),
       messages: z.array(z.object({
@@ -241,7 +241,7 @@ export const projectChat = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     // Pull recent artifacts as lightweight context
-    const { data: arts } = await context.supabase
+    const { data: arts } = await context.db
       .from("artifacts")
       .select("kind, title, content_md")
       .eq("project_id", data.project_id)
@@ -249,7 +249,7 @@ export const projectChat = createServerFn({ method: "POST" })
       .limit(6);
 
     const ctx = (arts ?? [])
-      .map((a) => `### ${a.title} (${a.kind})\n${(a.content_md ?? "").slice(0, 1200)}`)
+      .map((a: any) => `### ${a.title} (${a.kind})\n${(a.content_md ?? "").slice(0, 1200)}`)
       .join("\n\n");
 
     const reply = await groqChat([
@@ -268,10 +268,10 @@ export const projectChat = createServerFn({ method: "POST" })
 
 // -------------- Recompute quality scores from latest artifacts --------------
 export const recomputeQualityScores = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: arts } = await context.supabase
+    const { data: arts } = await context.db
       .from("artifacts")
       .select("kind, score")
       .eq("project_id", data.project_id);
@@ -306,7 +306,7 @@ export const recomputeQualityScores = createServerFn({ method: "POST" })
       testing: avg(buckets.testing),
       maintainability: avg(buckets.maintainability),
     };
-    await context.supabase.from("quality_scores").upsert(scores, { onConflict: "project_id" });
+    await context.db.from("quality_scores").upsert(scores, { onConflict: "project_id" });
     return scores;
   });
 

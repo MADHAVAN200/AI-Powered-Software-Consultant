@@ -164,7 +164,7 @@ function DocumentationPage() {
   });
 
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const selectedDoc = documents.find((d) => d.id === selectedDocId) ?? null;
+  const selectedDoc = documents.find((d: any) => d.id === selectedDocId) ?? null;
 
   return (
     <>
@@ -296,7 +296,7 @@ function DocumentationPage() {
                   ) : (
                     <div className="space-y-2">
                       {documents.map((d) => {
-                        const rev = reviews.find((r) => r.document_id === d.id);
+                        const rev = reviews.find((r: any) => r.document_id === d.id);
                         return (
                           <div key={d.id} className="rounded-lg border p-3">
                             <div className="flex items-start justify-between gap-3">
@@ -330,7 +330,7 @@ function DocumentationPage() {
             {/* Templates */}
             <TabsContent value="templates" className="space-y-3">
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {templates.map((t) => (
+                {templates.map((t: any) => (
                   <Card key={t.id}>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center justify-between">
@@ -360,8 +360,8 @@ function DocumentationPage() {
                     <EmptyState icon={GitBranch} title="No versions yet" description="Versions are captured automatically on every edit." />
                   ) : (
                     <div className="space-y-2">
-                      {versions.map((v) => {
-                        const doc = documents.find((d) => d.id === v.document_id);
+                      {versions.map((v: any) => {
+                        const doc = documents.find((d: any) => d.id === v.document_id);
                         return (
                           <div key={v.id} className="flex items-start justify-between gap-3 rounded-md border p-3">
                             <div className="min-w-0 text-sm">
@@ -387,8 +387,8 @@ function DocumentationPage() {
             <DocDetail
               doc={selectedDoc}
               onClose={() => setSelectedDocId(null)}
-              comments={comments.filter((c) => c.document_id === selectedDoc.id)}
-              approvals={approvals.filter((a) => a.document_id === selectedDoc.id)}
+              comments={comments.filter((c: any) => c.document_id === selectedDoc.id)}
+              approvals={approvals.filter((a: any) => a.document_id === selectedDoc.id)}
               onSave={(payload) => save.mutate({ data: { ...payload, id: selectedDoc.id } })}
               onComment={(body, author) => addComment.mutate({ data: { document_id: selectedDoc.id, project_id: selectedDoc.project_id, author_name: author, body } })}
               onApproval={(stage, approver, status, notes) => upsertAppr.mutate({ data: { document_id: selectedDoc.id, project_id: selectedDoc.project_id, stage, approver_name: approver, status, notes: notes || null } })}

@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useLocation, useNavigate, redirect } fro
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
 import { ensureDemoProject } from "@/lib/demo.functions";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSession, getRole, clearSession, canAccess, type Session } from "@/lib/roles";
@@ -29,10 +29,10 @@ export const Route = createFileRoute("/_authenticated")({
     if (!canAccess(role, location.pathname)) {
       throw redirect({ to: "/dashboard" });
     }
-    // Keep anon supabase sign-in so server fns (requireSupabaseAuth) work.
-    let user = (await supabase.auth.getUser()).data.user;
+    // Keep anon sign-in so server fns (requireLocalAuth) work.
+    let user = (await db.auth.getUser()).data.user;
     if (!user) {
-      const anon = await supabase.auth.signInAnonymously();
+      const anon = await db.auth.signInAnonymously();
       if (anon.error || !anon.data.user) throw new Error(anon.error?.message ?? "Anon sign-in failed");
       user = anon.data.user;
     }

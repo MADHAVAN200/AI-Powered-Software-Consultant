@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireLocalAuth } from "./auth-middleware";
 import { groqChat, groqJson } from "./groq.server";
 
 const uuid = z.string().uuid();
@@ -23,10 +23,10 @@ const APPROVAL_STATUS = z.enum(["pending", "approved", "rejected", "changes_requ
 
 // ================= Overview =================
 export const getRequirementsWorkspace = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: uuid }).parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => z.object({ project_id: uuid }).parse(input))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const pid = data.project_id;
     const [
       overview, stakeholders, requirements, stories, ac, nfr, analysis, versions, approvals, comments,
@@ -81,10 +81,10 @@ const OverviewInput = z.object({
 });
 
 export const upsertOverview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => OverviewInput.parse(input))
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) => OverviewInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await context.db
       .from("project_overview")
       .upsert(data, { onConflict: "project_id" })
       .select("*")
@@ -95,8 +95,8 @@ export const upsertOverview = createServerFn({ method: "POST" })
 
 // ================= Stakeholders =================
 export const upsertStakeholder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((input: unknown) =>
     z.object({
       id: uuid.optional(),
       project_id: uuid,
@@ -109,18 +109,18 @@ export const upsertStakeholder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const payload = { ...data, email: data.email || null };
     const q = data.id
-      ? context.supabase.from("stakeholders").update(payload).eq("id", data.id).select("*").single()
-      : context.supabase.from("stakeholders").insert(payload).select("*").single();
+      ? context.db.from("stakeholders").update(payload).eq("id", data.id).select("*").single()
+      : context.db.from("stakeholders").insert(payload).select("*").single();
     const { data: row, error } = await q;
     if (error) throw new Error(error.message);
     return row;
   });
 
 export const deleteStakeholder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("stakeholders").delete().eq("id", data.id);
+    const { error } = await context.db.from("stakeholders").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -146,8 +146,8 @@ const RequirementInput = z.object({
   tags: z.array(z.string().max(50)).max(30).optional(),
 });
 
-async function nextRequirementCode(supabase: any, projectId: string): Promise<string> {
-  const { data } = await supabase
+async function nextRequirementCode(db: any, projectId: string): Promise<string> {
+  const { data } = await db
     .from("requirements")
     .select("code")
     .eq("project_id", projectId)
@@ -162,10 +162,10 @@ async function nextRequirementCode(supabase: any, projectId: string): Promise<st
 }
 
 export const upsertRequirement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => RequirementInput.parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => RequirementInput.parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     if (data.id) {
       // snapshot prior version
       const { data: prev } = await s.from("requirements").select("*").eq("id", data.id).single();
@@ -197,17 +197,17 @@ export const upsertRequirement = createServerFn({ method: "POST" })
   });
 
 export const deleteRequirement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("requirements").delete().eq("id", data.id);
+    const { error } = await context.db.from("requirements").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= User Stories =================
-async function nextStoryCode(supabase: any, projectId: string): Promise<string> {
-  const { data } = await supabase
+async function nextStoryCode(db: any, projectId: string): Promise<string> {
+  const { data } = await db
     .from("user_stories")
     .select("code")
     .eq("project_id", projectId)
@@ -222,8 +222,8 @@ async function nextStoryCode(supabase: any, projectId: string): Promise<string> 
 }
 
 export const upsertStory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) =>
     z.object({
       id: uuid.optional(),
       project_id: uuid,
@@ -241,7 +241,7 @@ export const upsertStory = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     if (data.id) {
       const { data: row, error } = await s.from("user_stories").update(data).eq("id", data.id).select("*").single();
       if (error) throw new Error(error.message);
@@ -254,18 +254,18 @@ export const upsertStory = createServerFn({ method: "POST" })
   });
 
 export const deleteStory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("user_stories").delete().eq("id", data.id);
+    const { error } = await context.db.from("user_stories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= Acceptance Criteria =================
 export const upsertAcceptance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) =>
     z.object({
       id: uuid.optional(),
       project_id: uuid,
@@ -277,7 +277,7 @@ export const upsertAcceptance = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const q = data.id
       ? s.from("acceptance_criteria").update(data).eq("id", data.id).select("*").single()
       : s.from("acceptance_criteria").insert(data).select("*").single();
@@ -287,18 +287,18 @@ export const upsertAcceptance = createServerFn({ method: "POST" })
   });
 
 export const deleteAcceptance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("acceptance_criteria").delete().eq("id", data.id);
+    const { error } = await context.db.from("acceptance_criteria").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= NFRs =================
 export const upsertNfr = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) =>
     z.object({
       id: uuid.optional(),
       project_id: uuid,
@@ -310,7 +310,7 @@ export const upsertNfr = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const q = data.id
       ? s.from("non_functional_requirements").update(data).eq("id", data.id).select("*").single()
       : s.from("non_functional_requirements").insert(data).select("*").single();
@@ -320,18 +320,18 @@ export const upsertNfr = createServerFn({ method: "POST" })
   });
 
 export const deleteNfr = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("non_functional_requirements").delete().eq("id", data.id);
+    const { error } = await context.db.from("non_functional_requirements").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= Approvals =================
 export const upsertApproval = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) =>
     z.object({
       id: uuid.optional(),
       project_id: uuid,
@@ -343,7 +343,7 @@ export const upsertApproval = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const q = data.id
       ? s.from("approvals").update(data).eq("id", data.id).select("*").single()
       : s.from("approvals").insert({ ...data, reviewer_id: context.userId }).select("*").single();
@@ -353,18 +353,18 @@ export const upsertApproval = createServerFn({ method: "POST" })
   });
 
 export const deleteApproval = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("approvals").delete().eq("id", data.id);
+    const { error } = await context.db.from("approvals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 // ================= Comments =================
 export const addComment = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) =>
     z.object({
       project_id: uuid,
       requirement_id: uuid,
@@ -373,7 +373,7 @@ export const addComment = createServerFn({ method: "POST" })
     }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase.from("requirement_comments")
+    const { data: row, error } = await context.db.from("requirement_comments")
       .insert({ ...data, author_id: context.userId })
       .select("*")
       .single();
@@ -383,8 +383,8 @@ export const addComment = createServerFn({ method: "POST" })
 
 // ================= AI: generate consultant summary =================
 export const aiGenerateOverview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: uuid, brief: z.string().min(20).max(6000) }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ project_id: uuid, brief: z.string().min(20).max(6000) }).parse(i))
   .handler(async ({ data, context }) => {
     const result = await groqJson<{
       client_name: string; business_domain: string; industry: string; project_type: string;
@@ -398,7 +398,7 @@ export const aiGenerateOverview = createServerFn({ method: "POST" })
       { role: "user", content: data.brief },
     ], { temperature: 0.3 });
 
-    const { data: row, error } = await context.supabase.from("project_overview")
+    const { data: row, error } = await context.db.from("project_overview")
       .upsert({ project_id: data.project_id, ...result }, { onConflict: "project_id" })
       .select("*").single();
     if (error) throw new Error(error.message);
@@ -407,8 +407,8 @@ export const aiGenerateOverview = createServerFn({ method: "POST" })
 
 // ================= AI: generate requirements from brief =================
 export const aiGenerateRequirements = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: uuid, brief: z.string().min(20).max(6000), count: z.number().int().min(3).max(25).optional() }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ project_id: uuid, brief: z.string().min(20).max(6000), count: z.number().int().min(3).max(25).optional() }).parse(i))
   .handler(async ({ data, context }) => {
     const count = data.count ?? 10;
     const result = await groqJson<{
@@ -426,7 +426,7 @@ export const aiGenerateRequirements = createServerFn({ method: "POST" })
       { role: "user", content: data.brief },
     ], { temperature: 0.4, max_tokens: 6000 });
 
-    const s = context.supabase;
+    const s = context.db;
     const startCode = await nextRequirementCode(s, data.project_id);
     const startNum = parseInt(startCode.replace(/\D/g, ""), 10);
     const rows = (result.requirements ?? []).map((r, idx) => ({
@@ -455,10 +455,10 @@ export const aiGenerateRequirements = createServerFn({ method: "POST" })
 
 // ================= AI: convert requirement -> stories =================
 export const aiRequirementToStories = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ requirement_id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ requirement_id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: req, error } = await s.from("requirements").select("*").eq("id", data.requirement_id).single();
     if (error) throw new Error(error.message);
     const result = await groqJson<{
@@ -486,10 +486,10 @@ export const aiRequirementToStories = createServerFn({ method: "POST" })
 
 // ================= AI: generate acceptance criteria =================
 export const aiAcceptanceCriteria = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ requirement_id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ requirement_id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: req, error } = await s.from("requirements").select("*").eq("id", data.requirement_id).single();
     if (error) throw new Error(error.message);
     const result = await groqJson<{ criteria: Array<{ given: string; when: string; then: string }> }>([
@@ -508,10 +508,10 @@ export const aiAcceptanceCriteria = createServerFn({ method: "POST" })
 
 // ================= AI: full analysis =================
 export const aiFullAnalysis = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: uuid }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ project_id: uuid }).parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const [{ data: reqs }, { data: nfrs }, { data: overview }] = await Promise.all([
       s.from("requirements").select("code,title,description,priority,category,module").eq("project_id", data.project_id),
       s.from("non_functional_requirements").select("category,metric,target_value").eq("project_id", data.project_id),
@@ -556,13 +556,13 @@ export const aiFullAnalysis = createServerFn({ method: "POST" })
 
 // ================= AI: improve/simplify/explain requirement =================
 export const aiRefineRequirement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({
     requirement_id: uuid,
     action: z.enum(["improve", "simplify", "rewrite", "explain", "estimate", "detect_missing"]),
   }).parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const { data: req, error } = await s.from("requirements").select("*").eq("id", data.requirement_id).single();
     if (error) throw new Error(error.message);
 
@@ -583,10 +583,10 @@ export const aiRefineRequirement = createServerFn({ method: "POST" })
 
 // ================= Export SRS / BRD =================
 export const exportRequirementsDoc = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: uuid, kind: z.enum(["srs", "brd"]) }).parse(i))
+  .middleware([requireLocalAuth])
+  .validator((i: unknown) => z.object({ project_id: uuid, kind: z.enum(["srs", "brd"]) }).parse(i))
   .handler(async ({ data, context }) => {
-    const s = context.supabase;
+    const s = context.db;
     const [{ data: overview }, { data: reqs }, { data: nfrs }, { data: stories }, { data: ac }] = await Promise.all([
       s.from("project_overview").select("*").eq("project_id", data.project_id).maybeSingle(),
       s.from("requirements").select("*").eq("project_id", data.project_id).order("code"),

@@ -23,7 +23,7 @@ export function ProjectSwitcher() {
       <Select value={projectId ?? undefined} onValueChange={setProjectId}>
         <SelectTrigger className="h-8 min-w-[200px] text-sm"><SelectValue placeholder="Select project" /></SelectTrigger>
         <SelectContent>
-          {projects.map((p) => (
+          {projects.map((p: any) => (
             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
           ))}
         </SelectContent>
